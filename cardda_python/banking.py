@@ -1,4 +1,4 @@
-from http_client import HttpClient
+from cardda_python.http_client import HttpClient
 from cardda_python.services.banking import (
     BankTransactionService,
     BankRecipientService,
