@@ -1,6 +1,6 @@
 from cardda_python.http_client import HttpClient
 from cardda_python.banking import BankingService
-from constants import API_BASE_URL, API_VERSION
+from cardda_python.constants import API_BASE_URL, API_VERSION
 
 class CarddaClient:
     def __init__(self, api_key, custom_url=None, custom_version=None):
