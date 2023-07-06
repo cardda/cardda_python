@@ -28,17 +28,14 @@ class HttpClient:
     @property
     def headers(self):
         return {
-            "Authorization": f'{self.api_key}',
+            "Authorization": f'Bearer {self.api_key}',
             "Content-Type": "application/json"
             }
     
     def _request(self, method: str, endpoint: str = "", data = {}, params = {}):
         response = self._client.request(method, endpoint, params=params, data=json.dumps(data), headers=self.headers)
         response.raise_for_status()
-        json_res = response.json()
-        print(json_res)
-        print(method)
-        return json_res
+        return response.json()
     
     def all(self, params) -> List[Any]:
         response = self._request('GET', params=params)
