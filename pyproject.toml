@@ -1,0 +1,21 @@
+[tool.poetry]
+name = "cardda-python"
+version = "0.1.0"
+description = ""
+authors = ["danckoo1 <dancko.fernandez@uc.cl>"]
+readme = "README.md"
+packages = [{include = "cardda_python"}]
+
+[tool.poetry.dependencies]
+python = "^3.9"
+httpx = "^0.24.1"
+importlib = "^1.0.4"
+
+
+[tool.poetry.group.dev.dependencies]
+httpretty = "^1.1.4"
+coverage = "^7.2.7"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
