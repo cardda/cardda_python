@@ -20,15 +20,16 @@ class BaseResource(ABC):
     def name() -> str:
         pass
 
-    def as_json(self):
-        json_dict = { 
-            k: getattr(self, k) for k in self._attributes 
-                if k not in self.ignored_attributes and not self.is_nested_obj(k)
-        }
+    def as_json(self, include_nested_obj=False, include_ignored_attr=False):
+        json_dict = {}
         for k in self._attributes:
-            if k not in self.ignored_attributes and k in self.allowed_nested_attributes:
-                value = getattr(self, k)
+            if k in self.ignored_attributes and not include_ignored_attr:
+                continue
+            value = getattr(self, k)
+            if self.is_nested_obj(k) and (k in self.allowed_nested_attributes or include_nested_obj):
                 json_dict[k] = value.as_json() if issubclass(type(value), BaseResource) else value
+            else:
+                json_dict[k] = value
         return json_dict
     
     def is_nested_obj(self, key) -> bool:
@@ -57,8 +58,6 @@ class BaseResource(ABC):
         if key in self.nested_objects.keys() and value:
             module = import_module("cardda_python.resources")
             klass = getattr(module, self.nested_objects[key])
-            print(klass)
-            print(value)
             if isinstance(value, list):
                 return [klass(item) for item in value]
             else:

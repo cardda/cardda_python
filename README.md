@@ -1,11 +1,17 @@
-# Cardda Python Client Library
+# Cardda Python Client
 
 [![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![GitHub contributors](https://img.shields.io/github/contributors/cardda/cardda-python.svg)](https://github.com/cardda/cardda-python/graphs/contributors)
+[![GitHub contributors](https://img.shields.io/github/contributors/cardda/cardda_python.svg)](https://github.com/cardda/cardda_python/graphs/contributors)
 
 **Cardda Python Client Library provides a simple way to interact with the Cardda API using Python.**
 
-Version 1.0.0 of this library provides support for managing banking-related entities in the Cardda system.
+Version 0.1.3 of this library provides support for managing banking-related entities in the Cardda system.
+
+## API Docs
+
+You can find our in depth api specification in here
+
+https://cardda-banking-api.readme.io/reference/getting-started
 
 ## Installation
 
@@ -14,8 +20,6 @@ You can install the Cardda Python Client Library using pip:
 ```bash
 pip install cardda-python
 ```
-
-Certainly! Here's an example of a well-documented README in Markdown format explaining the usage of the library:
 
 ## Getting Started
 
@@ -86,6 +90,34 @@ You can use similar methods and operations for other banking resources like reci
 
 For more details on the available methods and operations check the property `Service.methods` of each service, since not all of them implement each basic operation among `["all", "find", "create", "save", "delete"]`.
 
+## Responses
+
+Each service will respond with the respective bank resource. To check the attributes available for each entity check our API rest docs [here](https://cardda-banking-api.readme.io/reference/getting-started)
+
+Assuming a transaction resource has a property amount and a recipient with a name
+you get the following:
+```
+transaction_id = "TRANSACTION_ID"
+transaction = transactions_service.find(transaction_id)
+
+# accessing the properties
+transaction_amount = transaction.amount
+recipient.name = transaction.recipient.name
+```
+
+Also every resource has an `as_json()` method, which takes care of parsing the instance into normal Dict  with the properties.
+
+`as_json(include_nested_obj=False, include_ignored_attr=False)`: 
+- `include_nested_obj`: refers to the nested objects in the structure. By default, the recipient for example will get ignored in the json representation of a transaction.
+- `include_ignored_attr`: refers to the ignored attributes by default of each struecture, usually the `created_at` and `updated_at` properties are ignored in the json structure, but if set to True they can be included.
+
+Example usage:
+```
+transaction_json = transaction.as_hash()
+
+# this will hold true
+transaction_json["amount"] == transaction.amount
+```
 ## Custom Banking Services
 This section provides examples of how to use each individual method for the respective service, showcasing the additional functionalities they offer beyond the standard CRUD operations.
 
@@ -201,6 +233,8 @@ account_service.sync_recipients(account, **sync_data)
 account_service.sync_payrolls(account, **sync_data)
 
 ```
+
+In short, for every request check our API docs for further info on the paramters required for each endpoint so that you can pass them as named args on each function call.
 
 ## License
 
