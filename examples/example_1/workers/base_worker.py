@@ -8,7 +8,7 @@ import seed
 
 class BaseWorker:
     def __init__(self) -> None:
-        self.cardda_client = CarddaClient(os.environ.get("CARDDA_API_KEY", "dummy_key"), custom_url="https://cardda-staging.herokuapp.com")
+        self.cardda_client = CarddaClient(os.environ.get("CARDDA_API_KEY", "dummy_key"))
         self.connect_db()
         self.migrate_db()
         self.seed_db()
