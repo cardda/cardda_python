@@ -1,0 +1,3 @@
+sqlalchemy
+cardda_python
+python-dotenv
