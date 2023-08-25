@@ -191,6 +191,7 @@ class TransactionsWorker(BaseWorker):
             cardda_tx = self.transactions_service.find(self.transactions_metadata[db_tx.id]["cardda_id"])
             enqueue_query = { "bank_key_id": self.bank_key_id }
             self.transactions_service.enqueue(cardda_tx, **enqueue_query)
+            raise TransitionPendingException()
             # preauthorize if bank requires it
         else:
             transaction = self.parse_transaction(db_tx)
