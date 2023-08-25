@@ -11,6 +11,7 @@ class TransitionPendingException(Exception):
 
 class TransactionsWorker(BaseWorker):
     TRANSACTION_INVALID_STATUS = "NON_VALID"
+    RECIPIENT_INVALID_STATUS = "NON_VALID"
     TRANSACTION_ENROLLED_STATUS = "enqueued"
     RECIPIENT_ENROLLED_STATUS = "approved"
 
@@ -24,7 +25,7 @@ class TransactionsWorker(BaseWorker):
         self._recipients = []
         self.transactions_metadata = {}
         self.recipients_metadata = {}
-    
+        self.load_transactions()
     @property
     def transactions(self):
         return self._transactions
@@ -35,11 +36,11 @@ class TransactionsWorker(BaseWorker):
 
     @transactions.setter
     def transactions(self, new_transactions):
-        self._transactions = new_transactions
+        self._transactions = new_transactions.copy()
         self.transactions_metadata = {}
         # initialize metadata
         for tx in  self._transactions:
-            self.transactions_metadata[tx] = {
+            self.transactions_metadata[tx.id] = {
                 "cardda_id": None,
                 "cardda_status": None,
                 "recipient": None
@@ -60,7 +61,7 @@ class TransactionsWorker(BaseWorker):
             }
             # link rec to tx
             for tx in self.transactions_of_recipient(rec):
-                self.transactions_metadata[tx]["recipient"] = rec
+                self.transactions_metadata[tx.id]["recipient"] = rec
     
     def execute(self, attempts=10, wait_for=20):
         """
@@ -68,9 +69,10 @@ class TransactionsWorker(BaseWorker):
         At the end will report the successfuly enrolled transactions.
         """
         remaining_attempts = attempts
-        while remaining_attempts > 0:
+        success = False
+        while remaining_attempts > 0 and not success:
             try:
-                self.main_task()
+                success = self.main_task()
             except TransitionPendingException:
                 time.sleep(wait_for)
                 remaining_attempts -= 1
@@ -81,7 +83,6 @@ class TransactionsWorker(BaseWorker):
         """
         high level description of the tasks to be completed
         """
-        self.load_transactions()
 
         # enroll recipients
         should_wait_for_transitions = False
@@ -93,6 +94,7 @@ class TransactionsWorker(BaseWorker):
                 should_wait_for_transitions = True
 
         if should_wait_for_transitions: raise TransitionPendingException()
+        
        
         # enroll transactions
         for db_tx in self.transactions:
@@ -102,6 +104,8 @@ class TransactionsWorker(BaseWorker):
             except TransitionPendingException:
                 should_wait_for_transitions = True
         if should_wait_for_transitions: raise TransitionPendingException()
+        return True
+        
         
     def load_transactions(self):
         """
@@ -133,14 +137,20 @@ class TransactionsWorker(BaseWorker):
         return False
     
     def enroll_recipient(self, recipient):
+        # if invalid do not wast time retrying
+        if self.recipients_metadata[self.recipients.index(recipient)]["cardda_status"] == self.RECIPIENT_INVALID_STATUS: return
+
         if self.recipients_metadata[self.recipients.index(recipient)]["cardda_id"]:
+            print("enrolling")
             # enroll if draft
             cardda_recipient = self.recipients_service.find(self.recipients_metadata[self.recipients.index(recipient)]["cardda_id"])
             enroll_query = {
-                    "owner_id":self.bank_account_id,
                     "bank_key_id":self.bank_key_id,
                 }
             self.recipients_service.enroll(cardda_recipient, **enroll_query)
+            self.recipients_metadata[self.recipients.index(recipient)]["cardda_status"] = cardda_recipient.status
+            raise TransitionPendingException()
+            # authorize if bank requires it
         else:
             # create if doesnt exists
             recipient_payload = {
@@ -148,31 +158,40 @@ class TransactionsWorker(BaseWorker):
                 "bank_key_id": self.bank_key_id,
                 **recipient
             }
-            self.recipients_service.create(**recipient_payload)
-            raise TransitionPendingException()
+            try:
+                cardda_recipient = self.recipients_service.create(**recipient_payload)
+                self.recipients_metadata[self.recipients.index(recipient)]["cardda_id"] = cardda_recipient.id
+                self.recipients_metadata[self.recipients.index(recipient)]["cardda_status"] = cardda_recipient.status
+                raise TransitionPendingException()
+            except HTTPStatusError as exc:
+                 if 400 <= exc.response.status_code < 500:
+                     self.recipients_metadata[self.recipients.index(recipient)]["cardda_status"] = self.RECIPIENT_INVALID_STATUS
+                 else:
+                     print(exc)
 
     def validate_transaction(self, db_tx):
-        if self.transactions_metadata[db_tx]["cardda_status"] == self.TRANSACTION_ENROLLED_STATUS: return True
+        if self.transactions_metadata[db_tx.id]["cardda_status"] == self.TRANSACTION_ENROLLED_STATUS: return True
     
 
-        if self.transactions_metadata[db_tx]["cardda_id"]:
-            cardda_tx = self.transactions_service.find(self.transactions_metadata[db_tx]["transaction_id"])
-            self.transactions_metadata[db_tx]["cardda_id"] = cardda_tx.id
-            self.transactions_metadata[db_tx]["cardda_status"] = cardda_tx.status
-            if cardda_tx.transaction:
+        if self.transactions_metadata[db_tx.id]["cardda_id"]:
+            cardda_tx = self.transactions_service.find(self.transactions_metadata[db_tx.id]["cardda_id"])
+            self.transactions_metadata[db_tx.id]["cardda_status"] = cardda_tx.status
+            if cardda_tx.transition:
                 raise TransitionPendingException()
             elif cardda_tx.status == self.TRANSACTION_ENROLLED_STATUS:
                 return True
         return False
 
     def enroll_transaction(self, db_tx):
-        if self.transactions_metadata[db_tx]["cardda_status"] == self.TRANSACTION_INVALID_STATUS: return
+        if self.transactions_metadata[db_tx.id]["cardda_status"] == self.TRANSACTION_INVALID_STATUS: return
 
 
-        if self.transactions_metadata[db_tx]["cardda_id"]:
-            cardda_tx = self.transactions_service.find(self.transactions_metadata[db_tx]["transaction_id"])
+        if self.transactions_metadata[db_tx.id]["cardda_id"]:
+            # enqueue if draft
+            cardda_tx = self.transactions_service.find(self.transactions_metadata[db_tx.id]["cardda_id"])
             enqueue_query = { "bank_key_id": self.bank_key_id }
             self.transactions_service.enqueue(cardda_tx, **enqueue_query)
+            # preauthorize if bank requires it
         else:
             transaction = self.parse_transaction(db_tx)
             transaction_payload = {
@@ -180,13 +199,18 @@ class TransactionsWorker(BaseWorker):
                 "bank_key_id": self.bank_key_id,
                 **transaction
             }
+            # create if doesnt exists
             try:
+                print(self.transactions_metadata[db_tx.id]["cardda_id"])
                 cardda_tx = self.transactions_service.create(**transaction_payload)
-                self.transactions_metadata[db_tx]["cardda_id"] = cardda_tx.id
-                self.transactions_metadata[db_tx]["cardda_status"] = cardda_tx.status
+                self.transactions_metadata[db_tx.id]["cardda_id"] = cardda_tx.id
+                self.transactions_metadata[db_tx.id]["cardda_status"] = cardda_tx.status
+                print(self.transactions_metadata[db_tx.id]["cardda_id"])
+                print(cardda_tx.id)
+                raise TransitionPendingException()
             except HTTPStatusError as exc:
-                if exc.response.status_code == 400:
-                    self.transactions_metadata[db_tx]["status"] = self.TRANSACTION_INVALID_STATUS
+                if 400 <= exc.response.status_code < 500:
+                    self.transactions_metadata[db_tx.id]["status"] = self.TRANSACTION_INVALID_STATUS
                 else:
                     print(exc)
 
@@ -197,7 +221,7 @@ class TransactionsWorker(BaseWorker):
         report = "Attempt finished, this are the transactions statuses at the end:\n"
         statuses = {}
         for tx in self.transactions:
-            metadata = self.transactions_metadata[tx]
+            metadata = self.transactions_metadata[tx.id]
             if metadata["cardda_status"] not in statuses.keys():
                 statuses[metadata["cardda_status"]] = []
             
@@ -210,7 +234,7 @@ class TransactionsWorker(BaseWorker):
         """
         construct a bank transaction hash from the transaction
         """
-        recipient = self.transactions_metadata[tx]["recipient"]
+        recipient = self.transactions_metadata[tx.id]["recipient"]
         return {
             "description": tx.commentary,
             "amount": tx.amount,
@@ -228,7 +252,8 @@ class TransactionsWorker(BaseWorker):
             "name": f"{tx.name} {tx.lastname}",
             "account_number": tx.account_number,
             "account_type": self.parse_account_type(tx.account_type),
-            "bank_id": self.parse_bank(tx.account_bank)
+            "bank_id": self.parse_bank(tx.account_bank),
+            "owner_id":self.bank_account_id,
         }
         
     def parse_bank(self, bank_str):
