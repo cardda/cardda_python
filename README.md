@@ -20,6 +20,9 @@ You can install the Cardda Python Client Library using pip:
 ```bash
 pip install cardda-python
 ```
+## Examples
+
+If you need some already created scripts for some use cases you can check out the `/examples` folder, so you don't have to start working with Cardda from scratch. Use them as an educational tool, or modify them for your convinience, but at your own risk!
 
 ## Getting Started
 
