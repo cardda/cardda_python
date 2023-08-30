@@ -1,13 +1,13 @@
 [tool.poetry]
 name = "cardda-python"
-version = "0.1.3"
+version = "0.1.4"
 description = ""
 authors = ["danckoo1 <dancko.fernandez@uc.cl>"]
 readme = "README.md"
 packages = [{include = "cardda_python"}]
 
 [tool.poetry.dependencies]
-python = "^3.9"
+python = "^3.0"
 httpx = "^0.24.1"
 importlib = "^1.0.4"
 
