@@ -5,7 +5,7 @@
 
 **Cardda Python Client Library provides a simple way to interact with the Cardda API using Python.**
 
-Version 0.1.3 of this library provides support for managing banking-related entities in the Cardda system.
+Version 0.1.4 of this library provides support for managing banking-related entities in the Cardda system.
 
 ## API Docs
 

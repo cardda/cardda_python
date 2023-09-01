@@ -1,14 +1,28 @@
 [tool.poetry]
 name = "cardda-python"
-version = "0.1.4"
-description = ""
+version = "0.1.5"
+description = "This library wraps the api provided by Cardda to its customers."
+repository = "https://github.com/cardda/cardda_python"
 authors = ["danckoo1 <dancko.fernandez@uc.cl>"]
 readme = "README.md"
 packages = [{include = "cardda_python"}]
+classifiers = [
+    "Environment :: Web Environment",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.6",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11"
+]
 
 [tool.poetry.dependencies]
-python = "^3.0"
-httpx = "^0.24.1"
+python = "^3.6"
+httpx = "^0.22"
 importlib = "^1.0.4"
 
 
