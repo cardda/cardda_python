@@ -2,10 +2,14 @@
 
 [![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![GitHub contributors](https://img.shields.io/github/contributors/cardda/cardda_python.svg)](https://github.com/cardda/cardda_python/graphs/contributors)
+[![package-version](https://img.shields.io/badge/pypi%20package-0.1.5-blue.svg)](https://pypi.org/project/cardda-python/)
+[![Python Version](https://img.shields.io/badge/python-^3.6-green.svg)](https://www.python.org/downloads/release/python-360/)
 
 **Cardda Python Client Library provides a simple way to interact with the Cardda API using Python.**
 
-Version 0.1.3 of this library provides support for managing banking-related entities in the Cardda system.
+This package is a python 3 library that provides support for managing banking-related entities in the Cardda system.
+
+Currently we only support python 3.6 and above, so keep that in mind!
 
 ## API Docs
 
